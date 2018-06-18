@@ -58,24 +58,26 @@ public:
         ++size;
     }
 
-    const T pop() {
+    T pop() {
         if (size == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
 
         --size;
-        auto result = queue[0];
-        auto x = queue[size];
+        auto top_item(queue[0]);
+        auto last_item(queue[size]);
+        
         queue.pop_back();
 
         if (size != 0) {
-            siftDown(0, x);
+            siftDown(0, last_item);
         }
 
-        assert(indexFunction(result) == 0 && "Internal index of top item was not "
-                                             "null");
-        indexFunction(result) = std::numeric_limits<std::size_t>::max();
-        return const_cast<T>(result);
+        assert(indexFunction(top_item) == 0 && "Internal index of top item was "
+                                             "non-zero");
+        
+        indexFunction(top_item) = std::numeric_limits<std::size_t>::max();
+        return top_item;
     }
 
     T top() const {
@@ -118,7 +120,7 @@ public:
 
     template <typename Action>
     void forEach(Action& action) {
-        for (auto item : queue) {
+        for (auto& item : queue) {
             action(item);
         }
     }
