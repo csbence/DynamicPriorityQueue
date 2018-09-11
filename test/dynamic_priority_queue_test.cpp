@@ -7,9 +7,10 @@ namespace cserna {
 namespace {
 
 struct TestNode {
-    TestNode(int value) : value(value) {}
-    mutable std::size_t index;
+    explicit TestNode(int value) : value(value), index(0) {}
+
     int value;
+    mutable std::size_t index;
 };
 
 struct IndexFunction {
@@ -18,14 +19,38 @@ struct IndexFunction {
 
 struct NodeCompare {
     int operator()(const TestNode* lhs, const TestNode* rhs) const {
-        if (lhs->value < rhs->value) return -1;
-        if (lhs->value > rhs->value) return 1;
+        if (lhs->value < rhs->value)
+            return -1;
+        if (lhs->value > rhs->value)
+            return 1;
         return 0;
     }
 };
 
+struct NodeCompareRef {
+    int operator()(const TestNode& lhs, const TestNode& rhs) const {
+        if (lhs.value < rhs.value)
+            return -1;
+        if (lhs.value > rhs.value)
+            return 1;
+        return 0;
+    }
+};
+
+struct NodeHash {
+    std::size_t operator()(const TestNode& node) const {
+       return static_cast<size_t>(node.value);
+    }
+};
+
+struct NodeEqual {
+    bool operator()(const TestNode& lhs, const TestNode& rhs) const {
+        return lhs.value == rhs.value;
+    }
+};
+
 TEST_CASE("IndexFunctionTest", "[DynamicPriorityQueue]") {
-// Index function example
+    // Index function example
 
     IndexFunction indexFunction;
     TestNode testNode(1);
@@ -47,8 +72,7 @@ TEST_CASE("IndexFunctionTest", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("DynamicPriorityQueue add/clear tests", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100>
-        queue;
+    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
 
     SECTION("Add items to queue") {
         auto node1 = TestNode(1);
@@ -77,8 +101,7 @@ TEST_CASE("DynamicPriorityQueue add/clear tests", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100>
-        queue;
+    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
 
     SECTION("Add items to queue") {
         auto node1 = TestNode(1);
@@ -154,12 +177,10 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
         queue.clear();
         REQUIRE(queue.getSize() == 0);
     }
-
 }
 
 TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100>
-        queue;
+    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
 
     auto node1 = TestNode(1);
     auto node2 = TestNode(2);
@@ -183,5 +204,34 @@ TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
     REQUIRE(node2.value == -1);
 }
 
+TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100> queue;
+
+    auto node1 = TestNode(1);
+    auto node2 = TestNode(2);
+    auto node0 = TestNode(0);
+
+    queue.push(node0);
+    queue.push(node1);
+    queue.push(node2);
+
+    REQUIRE(NodeEqual()(queue.top(), node0));
+
+    node1.value = -1;
+
+    queue.update(node1);
+    REQUIRE(NodeEqual()(queue.top(), node1));
+
+    node2.value = -2;
+
+    queue.update(node0);
+    queue.update(node1);
+
+    REQUIRE(NodeEqual()(queue.top(), node1));
+
+    queue.update(node2);
+    REQUIRE(NodeEqual()(queue.top(), node2));
 }
-}  // namespace
+
+} // namespace
+} // namespace cserna

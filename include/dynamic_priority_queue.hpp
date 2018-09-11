@@ -7,8 +7,18 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace cserna {
+
+template <typename T, typename Hash = std::hash<T>, typename Equal = std::equal_to<T>>
+class NonIntrusiveIndexFunction {
+public:
+    std::size_t& operator()(const T& item) { return indexMap[item]; }
+
+private:
+    std::unordered_map<T, std::size_t, Hash, Equal> indexMap;
+};
 
 template <typename T, typename Comparator = std::less<T>>
 class ThreeWayComparatorAdapter {
@@ -39,10 +49,14 @@ public:
     }
 
     DynamicPriorityQueue(const DynamicPriorityQueue&) = delete;
-    DynamicPriorityQueue(DynamicPriorityQueue&&) = default;
+    DynamicPriorityQueue(DynamicPriorityQueue&&) noexcept = default;
     ~DynamicPriorityQueue() = default;
 
-    void push(T item) {
+    void push(const T& item) {
+       push(T(item));
+    }
+
+    void push(T&& item) {
         if (size == MAX_CAPACITY) {
             throw std::overflow_error("Priority queue reached its maximum capacity:" + std::to_string(MAX_CAPACITY));
         }
@@ -66,21 +80,30 @@ public:
         --size;
         auto top_item(queue[0]);
         auto last_item(queue[size]);
-        
+
         queue.pop_back();
 
         if (size != 0) {
             siftDown(0, last_item);
         }
 
-        assert(indexFunction(top_item) == 0 && "Internal index of top item was "
-                                             "non-zero");
-        
+        assert(indexFunction(top_item) == 0 &&
+                "Internal index of top item was "
+                "non-zero");
+
         indexFunction(top_item) = std::numeric_limits<std::size_t>::max();
         return top_item;
     }
 
-    T top() const {
+    T& top() {
+        if (size == 0) {
+            throw std::underflow_error("Priority queue is empty.");
+        }
+
+        return queue[0];
+    }
+
+    const T& top() const {
         if (size == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
@@ -106,7 +129,11 @@ public:
         }
     }
 
-    void update(T item) {
+    void update(const T& item) {
+        update(T(item));
+    }
+
+    void update(T&& item) {
         auto index = indexFunction(item);
 
         assert(index != std::numeric_limits<std::size_t>::max() && "Cannot update a node that is not in the queue!");
@@ -187,5 +214,4 @@ private:
     std::size_t size;
 };
 
-class NonIntrusiveDynamicPriorityQueue {};
-}
+} // namespace cserna
