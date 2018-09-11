@@ -7,7 +7,7 @@ namespace cserna {
 namespace {
 
 struct TestNode {
-    explicit TestNode(int value) : value(value), index(0) {}
+    explicit TestNode(int value) : value(value), index(std::numeric_limits<std::size_t>::max()) {}
 
     int value;
     mutable std::size_t index;
@@ -38,15 +38,11 @@ struct NodeCompareRef {
 };
 
 struct NodeHash {
-    std::size_t operator()(const TestNode& node) const {
-       return static_cast<size_t>(node.value);
-    }
+    std::size_t operator()(const TestNode& node) const { return static_cast<size_t>(node.value); }
 };
 
 struct NodeEqual {
-    bool operator()(const TestNode& lhs, const TestNode& rhs) const {
-        return lhs.value == rhs.value;
-    }
+    bool operator()(const TestNode& lhs, const TestNode& rhs) const { return lhs.value == rhs.value; }
 };
 
 TEST_CASE("IndexFunctionTest", "[DynamicPriorityQueue]") {
@@ -205,7 +201,8 @@ TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100> queue;
+    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
+            queue;
 
     auto node1 = TestNode(1);
     auto node2 = TestNode(2);
@@ -231,6 +228,15 @@ TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
 
     queue.update(node2);
     REQUIRE(NodeEqual()(queue.top(), node2));
+}
+
+TEST_CASE("NonIntrusiveIndexFunction contains test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
+            queue;
+
+    auto node1 = TestNode(1);
+
+    queue.contains(node1);
 }
 
 } // namespace
