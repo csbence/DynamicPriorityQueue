@@ -53,7 +53,7 @@ class DynamicPriorityQueue {
 public:
     explicit DynamicPriorityQueue(ThreeWayComparator comparator = ThreeWayComparator(),
             const IndexFunction indexFunction = IndexFunction())
-            : comparator{std::move(comparator)}, indexFunction{std::move(indexFunction)}, queue{}, size(0) {
+            : comparator{std::move(comparator)}, indexFunction{std::move(indexFunction)}, queue{} {
         queue.reserve(INITIAL_CAPACITY);
     }
 
@@ -64,33 +64,30 @@ public:
     void push(const T& item) { push(T(item)); }
 
     void push(T&& item) {
-        if (size == MAX_CAPACITY) {
+        if (queue.size() == MAX_CAPACITY) {
             throw std::overflow_error("Priority queue reached its maximum capacity:" + std::to_string(MAX_CAPACITY));
         }
 
-        if (size == 0) {
+        if (queue.size() == 0) {
             indexFunction(item) = 0;
             queue.push_back(item);
         } else {
             queue.push_back(item);
-            siftUp(size, item);
+            siftUp(queue.size(), item);
         }
-
-        ++size;
     }
 
     T pop() {
-        if (size == 0) {
+        if (queue.size() == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
-
-        --size;
+        
         auto top_item(queue[0]);
-        auto last_item(queue[size]);
-
+        auto last_item(queue[queue.size()]);
+        
         queue.pop_back();
 
-        if (size != 0) {
+        if (queue.size() != 0) {
             siftDown(0, last_item);
         }
 
@@ -103,7 +100,7 @@ public:
     }
 
     T& top() {
-        if (size == 0) {
+        if (queue.size() == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
 
@@ -111,7 +108,7 @@ public:
     }
 
     const T& top() const {
-        if (size == 0) {
+        if (queue.size() == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
 
@@ -119,11 +116,10 @@ public:
     }
 
     void clear() {
-        for (std::size_t i = 0; i < size; i++) {
+        for (std::size_t i = 0; i < queue.size(); i++) {
             indexFunction(queue[i]) = std::numeric_limits<std::size_t>::max();
         }
-
-        size = 0;
+        queue.clear();
     }
 
     void insertOrUpdate(T& item) {
@@ -157,13 +153,12 @@ public:
         }
     }
 
-    std::size_t getSize() const { return size; }
+    std::size_t size() const { return queue.size(); }
 
-    bool isEmpty() const { return size == 0; }
+    bool empty() const { return queue.size() == 0; }
 
-    bool isNotEmpty() const { return size != 0; }
-
-    bool contains(const T& item) const { return indexFunction(item) != std::numeric_limits<std::size_t>::max(); }
+    bool contains(T* item) const { return indexFunction(item) != 
+            std::numeric_limits<std::size_t>::max(); }
 
 private:
     void siftUp(const std::size_t index, T& item) {
@@ -186,16 +181,16 @@ private:
         indexFunction(item) = currentIndex;
     }
 
-    void siftDown(const std::size_t index, T& item) {
+    void siftDown(const std::size_t index, const T& item) {
         auto currentIndex = index;
-        const size_t half = size / 2;
+        const std::size_t half = queue.size() / 2;
 
         while (currentIndex < half) {
             auto childIndex = (currentIndex * 2) + 1;
             auto childItem = queue[childIndex];
             auto rightIndex = childIndex + 1;
 
-            if (rightIndex < size && comparator(childItem, queue[rightIndex]) > 0) {
+            if (rightIndex < queue.size() && comparator(childItem, queue[rightIndex]) > 0) {
                 childIndex = rightIndex;
                 childItem = queue[rightIndex];
             }
@@ -216,7 +211,6 @@ private:
     const ThreeWayComparator comparator;
     IndexFunction indexFunction;
     std::vector<T> queue;
-    std::size_t size;
 };
 
 } // namespace cserna

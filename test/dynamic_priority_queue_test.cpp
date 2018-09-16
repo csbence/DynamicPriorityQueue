@@ -74,25 +74,25 @@ TEST_CASE("DynamicPriorityQueue add/clear tests", "[DynamicPriorityQueue]") {
         auto node1 = TestNode(1);
         auto node2 = TestNode(2);
 
-        REQUIRE(queue.getSize() == 0);
-        REQUIRE(queue.isEmpty());
+        REQUIRE(queue.size() == 0);
+        REQUIRE(queue.empty());
 
         queue.push(&node1);
 
-        REQUIRE(queue.getSize() == 1);
+        REQUIRE(queue.size() == 1);
         REQUIRE(node1.index == 0);
         REQUIRE(queue.top() == &node1);
         REQUIRE(queue.top() != &node2);
-        REQUIRE(!queue.isEmpty());
+        REQUIRE(!queue.empty());
 
         queue.push(&node2);
 
-        REQUIRE(queue.getSize() == 2);
+        REQUIRE(queue.size() == 2);
     }
 
     SECTION("Clear queue") {
         queue.clear();
-        REQUIRE(queue.getSize() == 0);
+        REQUIRE(queue.size() == 0);
     }
 }
 
@@ -104,16 +104,16 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
         auto node2 = TestNode(2);
         auto node0 = TestNode(0);
 
-        REQUIRE(queue.getSize() == 0);
+        REQUIRE(queue.size() == 0);
 
         queue.push(&node1);
-        REQUIRE(queue.getSize() == 1);
+        REQUIRE(queue.size() == 1);
         REQUIRE(node1.index == 0);
 
         queue.push(&node2);
         queue.push(&node0);
 
-        REQUIRE(queue.getSize() == 3);
+        REQUIRE(queue.size() == 3);
 
         REQUIRE(queue.pop() == &node0);
         REQUIRE(queue.pop() == &node1);
@@ -136,7 +136,7 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
         queue.push(&node8);
 
         int value = -10;
-        while (!queue.isEmpty()) {
+        while (!queue.empty()) {
             REQUIRE(queue.top()->value >= value);
             value = queue.pop()->value;
         }
@@ -163,7 +163,7 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
         REQUIRE(node4.index == 0);
 
         int value = -10;
-        while (!queue.isEmpty()) {
+        while (!queue.empty()) {
             REQUIRE(queue.top()->value >= value);
             value = queue.pop()->value;
         }
@@ -171,7 +171,7 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
 
     SECTION("Clear queue") {
         queue.clear();
-        REQUIRE(queue.getSize() == 0);
+        REQUIRE(queue.size() == 0);
     }
 }
 
