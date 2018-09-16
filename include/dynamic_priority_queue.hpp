@@ -85,6 +85,8 @@ public:
         auto top_item(std::move(queue[0]));
 
         if (queue.size() == 1) {
+            indexFunction(top_item) = std::numeric_limits<std::size_t>::max();
+            queue.pop_back();
             return top_item;
         }
 
