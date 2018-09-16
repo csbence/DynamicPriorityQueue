@@ -73,7 +73,7 @@ public:
             queue.push_back(item);
         } else {
             queue.push_back(item);
-            siftUp(queue.size(), item);
+            siftUp(queue.size() - 1, item);
         }
     }
 
@@ -81,15 +81,17 @@ public:
         if (queue.size() == 0) {
             throw std::underflow_error("Priority queue is empty.");
         }
-        
-        auto top_item(queue[0]);
-        auto last_item(queue[queue.size()]);
-        
-        queue.pop_back();
 
-        if (queue.size() != 0) {
-            siftDown(0, last_item);
+        auto top_item(std::move(queue[0]));
+
+        if (queue.size() == 1) {
+            return top_item;
         }
+
+        auto last_item(std::move(queue[queue.size() - 1]));
+
+        queue.pop_back();
+        siftDown(0, last_item);
 
         assert(indexFunction(top_item) == 0 &&
                 "Internal index of top item was "
@@ -113,6 +115,34 @@ public:
         }
 
         return queue[0];
+    }
+    
+    void remove(const T& item) {
+        remove(T(item));
+    }
+
+    void remove(T&& item) {
+        if (!contains(item)) {
+          return;
+        }
+      
+        const auto index = indexFunction(item);
+        // Invalidate the item's index.
+        indexFunction(item) = std::numeric_limits<std::size_t>::max();
+        
+        if (index == queue.size() - 1) {
+          queue.pop_back();
+          return;
+        }
+
+        // Override the removed item's slot with the last item
+        queue[index] = std::move(queue[queue.size() - 1]);
+        indexFunction(queue[index]) = index;
+
+        queue.pop_back();
+
+        // The heap property might've been violated by the swap. Let's fix it.
+        siftDown(index, queue[index]);
     }
 
     void clear() {
@@ -157,8 +187,7 @@ public:
 
     bool empty() const { return queue.size() == 0; }
 
-    bool contains(T* item) const { return indexFunction(item) != 
-            std::numeric_limits<std::size_t>::max(); }
+    bool contains(const T& item) const { return indexFunction(item) != std::numeric_limits<std::size_t>::max(); }
 
 private:
     void siftUp(const std::size_t index, T& item) {

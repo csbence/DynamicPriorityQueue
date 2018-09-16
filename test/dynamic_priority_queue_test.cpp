@@ -6,19 +6,20 @@
 namespace cserna {
 namespace {
 
-struct TestNode {
-    explicit TestNode(int value) : value(value), index(std::numeric_limits<std::size_t>::max()) {}
+struct TestItem {
+    explicit TestItem(int value) : value(value), index(std::numeric_limits<std::size_t>::max()) {}
 
     int value;
     mutable std::size_t index;
 };
 
 struct IndexFunction {
-    std::size_t& operator()(TestNode* testNode) { return testNode->index; }
+    std::size_t& operator()(TestItem* testNode) { return testNode->index; }
+    std::size_t operator()(const TestItem* testNode) const { return testNode->index; }
 };
 
-struct NodeCompare {
-    int operator()(const TestNode* lhs, const TestNode* rhs) const {
+struct ItemCompare {
+    int operator()(const TestItem* lhs, const TestItem* rhs) const {
         if (lhs->value < rhs->value)
             return -1;
         if (lhs->value > rhs->value)
@@ -28,7 +29,7 @@ struct NodeCompare {
 };
 
 struct NodeCompareRef {
-    int operator()(const TestNode& lhs, const TestNode& rhs) const {
+    int operator()(const TestItem& lhs, const TestItem& rhs) const {
         if (lhs.value < rhs.value)
             return -1;
         if (lhs.value > rhs.value)
@@ -38,20 +39,20 @@ struct NodeCompareRef {
 };
 
 struct NodeHash {
-    std::size_t operator()(const TestNode& node) const { return static_cast<size_t>(node.value); }
+    std::size_t operator()(const TestItem& node) const { return static_cast<size_t>(node.value); }
 };
 
 struct NodeEqual {
-    bool operator()(const TestNode& lhs, const TestNode& rhs) const { return lhs.value == rhs.value; }
+    bool operator()(const TestItem& lhs, const TestItem& rhs) const { return lhs.value == rhs.value; }
 };
 
 TEST_CASE("IndexFunctionTest", "[DynamicPriorityQueue]") {
     // Index function example
 
     IndexFunction indexFunction;
-    TestNode testNode(1);
+    TestItem testNode(1);
     testNode.index = 1;
-    NodeCompare nodeCompare;
+    ItemCompare nodeCompare;
     nodeCompare(&testNode, &testNode);
 
     auto& index = indexFunction(&testNode);
@@ -68,13 +69,13 @@ TEST_CASE("IndexFunctionTest", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("DynamicPriorityQueue add/clear tests", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
+    DynamicPriorityQueue<TestItem*, IndexFunction, ItemCompare, 100, 100> queue;
 
     SECTION("Add items to queue") {
-        auto node1 = TestNode(1);
-        auto node2 = TestNode(2);
+        auto node1 = TestItem(1);
+        auto node2 = TestItem(2);
 
-        REQUIRE(queue.size() == 0);
+        REQUIRE(queue.empty());
         REQUIRE(queue.empty());
 
         queue.push(&node1);
@@ -92,25 +93,68 @@ TEST_CASE("DynamicPriorityQueue add/clear tests", "[DynamicPriorityQueue]") {
 
     SECTION("Clear queue") {
         queue.clear();
-        REQUIRE(queue.size() == 0);
+        REQUIRE(queue.empty());
     }
 }
 
+TEST_CASE("DynamicPriorityQueue remove test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<TestItem*, IndexFunction, ItemCompare, 100, 100> queue;
+
+    auto node0 = TestItem(0);
+    auto node1 = TestItem(1);
+    auto node2 = TestItem(2);
+
+    REQUIRE(queue.empty());
+
+    queue.push(&node1);
+    queue.push(&node2);
+
+    REQUIRE(node1.index == 0);
+    REQUIRE(node2.index == 1);
+
+    queue.push(&node0);
+
+    REQUIRE(queue.size() == 3);
+    REQUIRE(node0.index != std::numeric_limits<std::size_t>::max());
+
+    // Remove last element
+    queue.remove(&node1);
+
+    REQUIRE(queue.size() == 2);
+    REQUIRE(node0.index == 0);
+    REQUIRE(node2.index == 1);
+    REQUIRE(node1.index == std::numeric_limits<std::size_t>::max());
+    
+    // Remove first element
+    
+    queue.remove(&node0);
+
+    REQUIRE(queue.size() == 1);
+    REQUIRE(node2.index == 0);
+    REQUIRE(node0.index == std::numeric_limits<std::size_t>::max());
+    REQUIRE(node1.index == std::numeric_limits<std::size_t>::max());
+}
+
 TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
+    DynamicPriorityQueue<TestItem*, IndexFunction, ItemCompare, 100, 100> queue;
 
     SECTION("Add items to queue") {
-        auto node1 = TestNode(1);
-        auto node2 = TestNode(2);
-        auto node0 = TestNode(0);
+        auto node0 = TestItem(0);
+        auto node1 = TestItem(1);
+        auto node2 = TestItem(2);
 
-        REQUIRE(queue.size() == 0);
+        REQUIRE(queue.empty());
 
         queue.push(&node1);
         REQUIRE(queue.size() == 1);
         REQUIRE(node1.index == 0);
 
         queue.push(&node2);
+        REQUIRE(queue.size() == 2);
+        REQUIRE(node1.index == 0);
+        REQUIRE(node2.index == 1);
+        REQUIRE(node0.index == std::numeric_limits<std::size_t>::max());
+
         queue.push(&node0);
 
         REQUIRE(queue.size() == 3);
@@ -121,12 +165,12 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
     }
 
     SECTION("Add several items") {
-        auto node3 = TestNode(12);
-        auto node4 = TestNode(16);
-        auto node5 = TestNode(-1);
-        auto node6 = TestNode(5);
-        auto node7 = TestNode(9);
-        auto node8 = TestNode(9);
+        auto node3 = TestItem(12);
+        auto node4 = TestItem(16);
+        auto node5 = TestItem(-1);
+        auto node6 = TestItem(5);
+        auto node7 = TestItem(9);
+        auto node8 = TestItem(9);
 
         queue.push(&node3);
         queue.push(&node4);
@@ -143,12 +187,12 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
     }
 
     SECTION("Update item") {
-        auto node3 = TestNode(12);
-        auto node4 = TestNode(16);
-        auto node5 = TestNode(-1);
-        auto node6 = TestNode(5);
-        auto node7 = TestNode(9);
-        auto node8 = TestNode(9);
+        auto node3 = TestItem(12);
+        auto node4 = TestItem(16);
+        auto node5 = TestItem(-1);
+        auto node6 = TestItem(5);
+        auto node7 = TestItem(9);
+        auto node8 = TestItem(9);
 
         queue.push(&node3);
         queue.push(&node4);
@@ -171,16 +215,16 @@ TEST_CASE("DynamicPriorityQueue order test", "[DynamicPriorityQueue]") {
 
     SECTION("Clear queue") {
         queue.clear();
-        REQUIRE(queue.size() == 0);
+        REQUIRE(queue.empty());
     }
 }
 
 TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode*, IndexFunction, NodeCompare, 100, 100> queue;
+    DynamicPriorityQueue<TestItem*, IndexFunction, ItemCompare, 100, 100> queue;
 
-    auto node1 = TestNode(1);
-    auto node2 = TestNode(2);
-    auto node0 = TestNode(0);
+    auto node1 = TestItem(1);
+    auto node2 = TestItem(2);
+    auto node0 = TestItem(0);
 
     queue.push(&node0);
     queue.push(&node1);
@@ -188,7 +232,7 @@ TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
 
     int counter = 0;
 
-    auto action = [&](TestNode* node) {
+    auto action = [&](TestItem* node) {
         node->value = -1;
         ++counter;
     };
@@ -201,12 +245,12 @@ TEST_CASE("DynamicPriorityQueue forEach test", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
+    DynamicPriorityQueue<TestItem, NonIntrusiveIndexFunction<TestItem, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
             queue;
 
-    auto node1 = TestNode(1);
-    auto node2 = TestNode(2);
-    auto node0 = TestNode(0);
+    auto node1 = TestItem(1);
+    auto node2 = TestItem(2);
+    auto node0 = TestItem(0);
 
     queue.push(node0);
     queue.push(node1);
@@ -231,10 +275,10 @@ TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
 }
 
 TEST_CASE("NonIntrusiveIndexFunction contains test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<TestNode, NonIntrusiveIndexFunction<TestNode, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
+    DynamicPriorityQueue<TestItem, NonIntrusiveIndexFunction<TestItem, NodeHash, NodeEqual>, NodeCompareRef, 100, 100>
             queue;
 
-    auto node1 = TestNode(1);
+    auto node1 = TestItem(1);
 
     queue.contains(node1);
 }
