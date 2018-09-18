@@ -198,15 +198,15 @@ private:
         auto currentIndex = index;
         while (currentIndex > 0) {
             const auto parentIndex = (currentIndex - 1) / 2;
-            auto parentItem = queue[parentIndex];
+            T& parentItem = queue[parentIndex];
 
             if (comparator(item, parentItem) >= 0) {
                 break;
             }
 
             // Move parent down and update its index
-            queue[currentIndex] = parentItem;
             indexFunction(parentItem) = currentIndex;
+            queue[currentIndex] = std::move(queue[parentIndex]);
             currentIndex = parentIndex;
         }
 

@@ -283,5 +283,62 @@ TEST_CASE("NonIntrusiveIndexFunction contains test", "[DynamicPriorityQueue]") {
     queue.contains(node1);
 }
 
+
+struct NoCopyItem {
+    explicit NoCopyItem(int value) : value(value), index(std::numeric_limits<std::size_t>::max()) {}
+    NoCopyItem(const NoCopyItem&) = delete;
+    NoCopyItem(NoCopyItem&&) = default;
+    NoCopyItem& operator=(NoCopyItem&&) = default;
+
+    int value;
+    std::size_t index = std::numeric_limits<std::size_t>::max();
+};
+
+struct NoCopyIndexFunction {
+    std::size_t& operator()(NoCopyItem* item) { return item->index; }
+    std::size_t operator()(const NoCopyItem* item) const { return item->index; }
+};
+
+struct NoCopyCompare {
+    int operator()(const TestItem* lhs, const TestItem* rhs) const {
+        if (lhs->value < rhs->value)
+            return -1;
+        if (lhs->value > rhs->value)
+            return 1;
+        return 0;
+    }
+};
+
+struct NoCopyRefIndexFunction {
+  std::size_t& operator()(NoCopyItem& item) { return item.index; }
+  std::size_t operator()(const NoCopyItem& item) const { return item.index; }
+};
+
+struct NoCopyRefCompare {
+    int operator()(const NoCopyItem& lhs, const NoCopyItem& rhs) const {
+        if (lhs.value < rhs.value)
+            return -1;
+        if (lhs.value > rhs.value)
+            return 1;
+        return 0;
+    }
+};
+
+TEST_CASE("Copy test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, 100, 100>
+            queue;
+
+    NoCopyItem item1(1);
+    NoCopyItem item2(2);
+    NoCopyItem item3(3);
+
+//    NoCopyItem item4 = std::move(item1);
+//    NoCopyItem item5(std::move(item1));
+
+    queue.push(std::move(item1));
+    queue.push(std::move(item2));
+    queue.push(std::move(item3));
+}
+
 } // namespace
 } // namespace cserna
