@@ -124,9 +124,9 @@ TEST_CASE("DynamicPriorityQueue remove test", "[DynamicPriorityQueue]") {
     REQUIRE(node0.index == 0);
     REQUIRE(node2.index == 1);
     REQUIRE(node1.index == std::numeric_limits<std::size_t>::max());
-    
+
     // Remove first element
-    
+
     queue.remove(&node0);
 
     REQUIRE(queue.size() == 1);
