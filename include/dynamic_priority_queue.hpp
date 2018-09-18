@@ -76,12 +76,12 @@ public:
             throw std::overflow_error("Priority queue reached its maximum capacity:" + std::to_string(MAX_CAPACITY));
         }
 
-        if (queue.size() == 0) {
-            indexFunction(item) = 0;
-            queue.push_back(item);
-        } else {
-            queue.push_back(item);
-            siftUp(queue.size() - 1, std::move(item));
+        const std::size_t index = queue.size();
+        indexFunction(item) = index;
+        queue.push_back(std::move(item));
+
+        if (index != 0) {
+            siftUp(index);
         }
     }
 
@@ -90,25 +90,27 @@ public:
             throw std::underflow_error("Priority queue is empty.");
         }
 
-        auto top_item(std::move(queue[0]));
-
-        if (queue.size() == 1) {
-            indexFunction(top_item) = std::numeric_limits<std::size_t>::max();
-            queue.pop_back();
-            return top_item;
-        }
-
-        auto last_item(std::move(queue[queue.size() - 1]));
-
-        queue.pop_back();
-        siftDown(0, std::move(last_item));
+        T top_item(std::move(queue[0]));
 
         assert(indexFunction(top_item) == 0 &&
-                "Internal index of top item was "
-                "non-zero");
+            "Internal index of top item was "
+            "non-zero");
 
         indexFunction(top_item) = std::numeric_limits<std::size_t>::max();
-        return top_item;
+
+        if (queue.size() == 1) {
+            queue.pop_back();
+
+            return top_item;
+        } else {
+            T last_item(std::move(queue[queue.size() - 1]));
+            indexFunction(last_item) = 0;
+            queue[0] = std::move(last_item);
+            queue.pop_back();
+            siftDown(0);
+
+            return top_item;
+        }
     }
 
     T& top() {
@@ -132,7 +134,7 @@ public:
             return;
         }
 
-        const auto index = indexFunction(item);
+        const std::size_t index = indexFunction(item);
         // Invalidate the item's index.
         indexFunction(item) = std::numeric_limits<std::size_t>::max();
 
@@ -148,7 +150,7 @@ public:
         queue.pop_back();
 
         // The heap property might've been violated by the swap. Let's fix it.
-        siftDown(index, std::move(queue[index]));
+        siftDown(index);
     }
 
     void clear() {
@@ -173,10 +175,10 @@ public:
         assert(originalIndex != std::numeric_limits<std::size_t>::max() &&
                 "Cannot update a node that is not in the queue!");
 
-        const bool moved = siftUp(originalIndex, std::move(item));
+        const bool moved = siftUp(originalIndex);
 
         if (!moved) {
-            siftDown(originalIndex, std::move(queue[originalIndex]));
+            siftDown(originalIndex);
         }
     }
 
@@ -194,10 +196,12 @@ public:
     bool contains(const T& item) const { return indexFunction(item) != std::numeric_limits<std::size_t>::max(); }
 
 private:
-    bool siftUp(const std::size_t index, T item) {
-        auto currentIndex = index;
+    bool siftUp(const std::size_t index) {
+        T item = std::move(queue[index]);
+        std::size_t currentIndex = index;
+
         while (currentIndex > 0) {
-            const auto parentIndex = (currentIndex - 1) / 2;
+            const std::size_t parentIndex = (currentIndex - 1) / 2;
             T& parentItem = queue[parentIndex];
 
             if (comparator(item, parentItem) >= 0) {
@@ -216,7 +220,9 @@ private:
         return currentIndex == index;
     }
 
-    bool siftDown(const std::size_t index, T item) {
+    bool siftDown(const std::size_t index) {
+        T item = std::move(queue[index]);
+
         std::size_t currentIndex = index;
         const std::size_t half = queue.size() / 2;
 
@@ -234,8 +240,8 @@ private:
                 break;
             }
 
-            queue[currentIndex] = childItem;
             indexFunction(childItem) = currentIndex;
+            queue[currentIndex] = std::move(childItem);
             currentIndex = childIndex;
         }
 
