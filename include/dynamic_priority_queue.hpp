@@ -183,7 +183,7 @@ public:
     }
 
     template <typename Action>
-    void forEach(Action& action) {
+    void forEach(Action action = Action()) {
         for (auto& item : queue) {
             action(item);
         }
@@ -227,22 +227,22 @@ private:
         const std::size_t half = queue.size() / 2;
 
         while (currentIndex < half) {
-            std::size_t childIndex = (currentIndex * 2) + 1;
-            T& childItem = queue[childIndex];
-            std::size_t rightIndex = childIndex + 1;
+            std::size_t leftChildIndex = currentIndex * 2 + 1;
+            std::size_t rightChildIndex = currentIndex * 2 + 2;
 
-            if (rightIndex < queue.size() && comparator(childItem, queue[rightIndex]) > 0) {
-                childIndex = rightIndex;
-                childItem = queue[rightIndex];
+            std::size_t betterChildIndex = leftChildIndex;
+
+            if (rightChildIndex < queue.size() && comparator(queue[leftChildIndex], queue[rightChildIndex]) > 0) {
+                betterChildIndex = rightChildIndex;
             }
 
-            if (comparator(item, childItem) <= 0) {
+            if (comparator(item, queue[betterChildIndex]) <= 0) {
                 break;
             }
 
-            indexFunction(childItem) = currentIndex;
-            queue[currentIndex] = std::move(childItem);
-            currentIndex = childIndex;
+            indexFunction(queue[betterChildIndex]) = currentIndex;
+            queue[currentIndex] = std::move(queue[betterChildIndex]);
+            currentIndex = betterChildIndex;
         }
 
         indexFunction(item) = currentIndex;

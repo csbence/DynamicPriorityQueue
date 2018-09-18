@@ -252,26 +252,14 @@ TEST_CASE("NonIntrusiveIndexFunction test", "[DynamicPriorityQueue]") {
     auto node2 = TestItem(2);
     auto node0 = TestItem(0);
 
+    // Note the following queue items are detached from the original items:
     queue.push(node0);
     queue.push(node1);
     queue.push(node2);
 
-    REQUIRE(NodeEqual()(queue.top(), node0));
-
-    node1.value = -1;
-
-    queue.update(node1);
-    REQUIRE(NodeEqual()(queue.top(), node1));
-
-    node2.value = -2;
-
-    queue.update(node0);
-    queue.update(node1);
-
-    REQUIRE(NodeEqual()(queue.top(), node1));
-
-    queue.update(node2);
-    REQUIRE(NodeEqual()(queue.top(), node2));
+    REQUIRE(NodeEqual()(queue.pop(), node0));
+    REQUIRE(NodeEqual()(queue.pop(), node1));
+    REQUIRE(NodeEqual()(queue.pop(), node2));
 }
 
 TEST_CASE("NonIntrusiveIndexFunction contains test", "[DynamicPriorityQueue]") {
@@ -326,20 +314,74 @@ struct NoCopyRefCompare {
     }
 };
 
-TEST_CASE("Copy test", "[DynamicPriorityQueue]") {
-    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, 100, 100>
+struct NoCopyRefPrint {
+  void operator()(NoCopyItem& item) {
+      WARN("Item: " << item.value << "index: " << item.index);
+  }
+};
+
+TEST_CASE("Copy restricted test", "[DynamicPriorityQueue]") {
+    constexpr int size = 10000;
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, size, size>
             queue;
 
-    NoCopyItem item1(1);
-    NoCopyItem item2(2);
-    NoCopyItem item3(3);
 
-//    NoCopyItem item4 = std::move(item1);
-//    NoCopyItem item5(std::move(item1));
+    for (int i = 0; i < size; ++i) {
+        queue.push(NoCopyItem{size - 1 - i});
+    }
 
-    queue.push(std::move(item1));
-    queue.push(std::move(item2));
-    queue.push(std::move(item3));
+    for (int i = 0; i < size; ++i) {
+        REQUIRE(queue.top().value == i);
+        REQUIRE(queue.top().index == 0);
+        NoCopyItem item = queue.pop();
+
+        REQUIRE(item.value == i);
+        REQUIRE(item.index == std::numeric_limits<std::size_t>::max());
+    }
+}
+
+TEST_CASE("Overflow expection test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, 0, 0>
+        queue_zero;
+
+    REQUIRE_THROWS_AS(queue_zero.push(NoCopyItem{-1}), std::overflow_error);
+
+    constexpr int size = 10;
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, size, size>
+        queue;
+
+    for (int i = 0; i < size; ++i) {
+        REQUIRE_NOTHROW(queue.push(NoCopyItem{i}));
+    }
+
+    REQUIRE_THROWS_AS(queue.push(NoCopyItem{-1}), std::overflow_error);
+}
+
+TEST_CASE("Pop underflow expection test", "[DynamicPriorityQueue]") {
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, 0, 0>
+        queue_zero;
+
+    REQUIRE_THROWS_AS(queue_zero.pop(), std::underflow_error);
+    REQUIRE_THROWS_AS(queue_zero.top(), std::underflow_error);
+
+    constexpr int size = 10;
+    DynamicPriorityQueue<NoCopyItem, NoCopyRefIndexFunction, NoCopyRefCompare, size, size>
+        queue;
+
+    REQUIRE_THROWS_AS(queue.pop(), std::underflow_error);
+    REQUIRE_THROWS_AS(queue.top(), std::underflow_error);
+
+    for (int i = 0; i < size; ++i) {
+        REQUIRE_NOTHROW(queue.push(NoCopyItem{i}));
+    }
+
+    for (int i = 0; i < size; ++i) {
+        REQUIRE_NOTHROW(queue.top());
+        REQUIRE_NOTHROW(queue.pop());
+    }
+
+    REQUIRE_THROWS_AS(queue.pop(), std::underflow_error);
+    REQUIRE_THROWS_AS(queue.top(), std::underflow_error);
 }
 
 } // namespace
