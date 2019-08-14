@@ -276,7 +276,7 @@ struct NoCopyItem {
     explicit NoCopyItem(int value) : value(value), index(std::numeric_limits<std::size_t>::max()) {}
     NoCopyItem(const NoCopyItem&) = delete;
     NoCopyItem(NoCopyItem&&) = default;
-    NoCopyItem& operator=(const NoCopyItem&) = default;
+    NoCopyItem& operator=(const NoCopyItem&) = delete;
     NoCopyItem& operator=(NoCopyItem&&) = default;
     ~NoCopyItem() = default;
 
