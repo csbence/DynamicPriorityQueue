@@ -61,15 +61,17 @@ template <typename T,
         std::size_t MAX_CAPACITY = std::numeric_limits<std::size_t>::max()>
 class DynamicPriorityQueue {
 public:
-    explicit DynamicPriorityQueue(ThreeWayComparator comparator = ThreeWayComparator(),
-            const IndexFunction indexFunction = IndexFunction())
-            : comparator{std::move(comparator)}, indexFunction{std::move(indexFunction)}, queue{} {
+    explicit DynamicPriorityQueue(const ThreeWayComparator& comparator = ThreeWayComparator(),
+            IndexFunction indexFunction = IndexFunction())
+            : comparator{comparator}, indexFunction{std::move(indexFunction)}, queue{} {
         queue.reserve(INITIAL_CAPACITY);
     }
-
+    
+    ~DynamicPriorityQueue() = default;
     DynamicPriorityQueue(const DynamicPriorityQueue&) = delete;
     DynamicPriorityQueue(DynamicPriorityQueue&&) noexcept = default;
-    ~DynamicPriorityQueue() = default;
+    DynamicPriorityQueue& operator=(const DynamicPriorityQueue&) = delete;
+    DynamicPriorityQueue& operator=(DynamicPriorityQueue&&) noexcept = default
 
     void push(T item) {
         if (queue.size() == MAX_CAPACITY) {
@@ -251,7 +253,7 @@ private:
         return currentIndex == index;
     }
 
-    const ThreeWayComparator comparator;
+    const ThreeWayComparator& comparator;
     IndexFunction indexFunction;
     std::vector<T> queue;
 };
